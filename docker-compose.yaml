@@ -7,10 +7,8 @@ services:
     volumes:
       - ../webui.db:/app/backend/data/webui.db
     networks:
-      - host
+      - open-webui
 
 networks:
-  default:
-    external:
-      name: host
-    driver: host
+  open-webui:
+    external: true
