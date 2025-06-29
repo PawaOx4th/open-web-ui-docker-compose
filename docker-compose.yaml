@@ -6,3 +6,10 @@ services:
       - "3001:8080"
     volumes:
       - ../webui.db:/app/backend/data/webui.db
+    network_mode: "host"
+
+networks:
+  default:
+    external:
+      name: host
+    driver: host
