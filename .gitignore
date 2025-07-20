@@ -4,3 +4,8 @@
 .env.test.local
 .env.production.local
 
+
+# 
+n8n-data
+postgresql-data
+backup

@@ -1,0 +1,7 @@
+{
+  "files.defaultLanguage": {
+    ".env": "env",
+    "*.yaml": "dockercompose",
+    "*.yml": "dockercompose"
+  }
+}
