@@ -1,15 +1,4 @@
 services:
-  n8n-init:
-    image: docker.n8n.io/n8nio/n8n
-    volumes:
-      - ./n8n_data:/tmp/n8n_backup
-    command: >
-      sh -c "
-        if [ ! -f /tmp/n8n_backup/package.json ]; then
-          cp -r /home/node/.n8n/* /tmp/n8n_backup/
-        fi
-      "
-
   n8n:
     container_name: n8n
     build:
@@ -32,13 +21,10 @@ services:
       - DB_POSTGRESDB_SCHEMA=${DB_POSTGRESDB_SCHEMA}
       - DB_POSTGRESDB_PASSWORD=${DB_POSTGRESDB_PASSWORD}
     volumes:
-      - ./n8n-data:/home/node/.n8n
+      - n8n-data:/home/node/.n8n
     depends_on:
       postgresql:
         condition: service_healthy
-      n8n-init:
-        condition: service_completed_successfully
-
     healthcheck:
       test:
         - CMD-SHELL
