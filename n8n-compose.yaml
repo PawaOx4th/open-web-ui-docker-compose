@@ -1,5 +1,6 @@
 services:
   n8n:
+    container_name: n8n
     build:
       context: .
       dockerfile: n8n.Dockerfile
@@ -37,6 +38,7 @@ services:
       - open-webui
 
   postgresql:
+    container_name: n8n_postgresql
     image: "postgres:16-alpine"
     volumes:
       - ./postgresql-data:/var/lib/postgresql/data
