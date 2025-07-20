@@ -1,6 +1,6 @@
 services:
   n8n-init:
-    image: n8n/n8n:latest
+    image: docker.n8n.io/n8nio/n8n
     volumes:
       - ./n8n_data:/tmp/n8n_backup
     command: >
