@@ -4,7 +4,8 @@ USER root
 RUN npm install -g axios  \
   date-fns \
   uuid \
-  slackify-markdown
+  slackify-markdown \
+  @octokit/core
 
 
 USER node
