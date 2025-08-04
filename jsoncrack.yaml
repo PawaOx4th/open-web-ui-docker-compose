@@ -1,0 +1,14 @@
+services:
+  jsoncrack:
+    image: pawaox4th/pawaox4th-jsoncrack
+    container_name: jsoncrack
+    ports:
+      - "8888:8080"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - open-webui
+
+networks:
+  open-webui:
+    external: true
