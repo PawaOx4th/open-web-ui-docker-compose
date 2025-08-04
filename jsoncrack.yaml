@@ -1,6 +1,7 @@
 services:
   jsoncrack:
     image: pawaox4th/pawaox4th-jsoncrack
+    platform: linux/amd64
     container_name: jsoncrack
     ports:
       - "8888:8080"
