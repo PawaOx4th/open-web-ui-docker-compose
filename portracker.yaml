@@ -16,3 +16,9 @@ services:
       - PORT=4999
       # Optional: For enhanced TrueNAS features
       # - TRUENAS_API_KEY=your-api-key-here
+    networks:
+      - open-webui
+
+networks:
+  open-webui:
+    external: true
