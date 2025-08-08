@@ -6,6 +6,8 @@ services:
     container_name: portracker
     restart: unless-stopped
     network_mode: "host"
+    ports:
+      - "4999:4999"
     volumes:
       # Required for data persistence
       - ./portracker-data:/data
