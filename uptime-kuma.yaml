@@ -1,0 +1,20 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    volumes:
+      - uptime-kuma-data:/app/data
+    ports:
+      # <Host Port>:<Container Port>
+      - 25661:3001
+    restart: unless-stopped
+    container_name: uptime-kuma
+    networks:
+      - open-webui
+
+volumes:
+  uptime-kuma-data:
+    driver: local
+
+networks:
+  open-webui:
+    external: true
