@@ -14,6 +14,5 @@ services:
       - open-webui
 
 networks:
-  default:
+  npm-shared:
     external: true
-    name: open-webui

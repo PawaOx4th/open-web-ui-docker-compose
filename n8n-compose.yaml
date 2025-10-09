@@ -64,6 +64,5 @@ volumes:
     driver: local
 
 networks:
-  default:
+  npm-shared:
     external: true
-    name: open-webui
