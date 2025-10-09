@@ -7,9 +7,8 @@ services:
       - "3001:8080"
     volumes:
       - ./backup:/app/backend/data/
-    networks:
-      - open-webui
 
 networks:
-  open-webui:
+  default:
     external: true
+    name: open-webui
