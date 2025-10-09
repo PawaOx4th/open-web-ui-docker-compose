@@ -64,5 +64,5 @@ volumes:
     driver: local
 
 networks:
-  npm-shared:
+  open-webui:
     external: true
