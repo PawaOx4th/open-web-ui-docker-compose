@@ -1,0 +1,26 @@
+services:
+  excalidraw:
+    build:
+      context: .
+      args:
+        - NODE_ENV=development
+    container_name: excalidraw
+    ports:
+      - "4002:80"
+    restart: on-failure
+    stdin_open: true
+    healthcheck:
+      disable: true
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./backup/excalidraw:/opt/node_app/app:delegated
+      - ./backup/excalidraw/package.json:/opt/node_app/package.json
+      - ./backup/excalidraw/yarn.lock:/opt/node_app/yarn.lock
+      - ./backup/excalidraw/node_modules:/opt/node_app/app/node_modules
+    networks:
+      - open-webui
+
+networks:
+  open-webui:
+    external: true
