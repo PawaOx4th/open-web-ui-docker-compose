@@ -2,8 +2,7 @@ services:
   excalidraw:
     build:
       context: .
-      args:
-        - NODE_ENV=development
+      dockerfile: excalidraw.Dockerfile
     container_name: excalidraw
     ports:
       - "4002:80"
@@ -11,8 +10,6 @@ services:
     stdin_open: true
     healthcheck:
       disable: true
-    environment:
-      - NODE_ENV=development
     volumes:
       - ./backup/excalidraw:/opt/node_app/app:delegated
       - ./backup/excalidraw/package.json:/opt/node_app/package.json
