@@ -1,15 +1,15 @@
 services:
   excalidraw:
-    build:
-      context: .
-      dockerfile: excalidraw.Dockerfile
+    image: excalidraw/excalidraw:latest
     container_name: excalidraw
     ports:
-      - "4002:80"
-    restart: on-failure
-    stdin_open: true
+      - "8092:80"
+    restart: unless-stopped
     healthcheck:
-      disable: true
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     volumes:
       - ./backup/excalidraw:/opt/node_app/app:delegated
       - ./backup/excalidraw/package.json:/opt/node_app/package.json
