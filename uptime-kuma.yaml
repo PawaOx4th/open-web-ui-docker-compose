@@ -8,13 +8,13 @@ services:
       - 25661:3001
     restart: unless-stopped
     container_name: uptime-kuma
-    networks:
-      - open-webui
+#     networks:
+#       - open-webui
 
-volumes:
-  uptime-kuma-data:
-    driver: local
+# volumes:
+#   uptime-kuma-data:
+#     driver: local
 
-networks:
-  open-webui:
-    external: true
+# networks:
+#   open-webui:
+#     external: true
