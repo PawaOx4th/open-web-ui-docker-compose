@@ -15,9 +15,9 @@ services:
       - ./backup/excalidraw/package.json:/opt/node_app/package.json
       - ./backup/excalidraw/yarn.lock:/opt/node_app/yarn.lock
       - ./backup/excalidraw/node_modules:/opt/node_app/app/node_modules
-    networks:
-      - open-webui
+#     networks:
+#       - open-webui
 
-networks:
-  open-webui:
-    external: true
+# networks:
+#   open-webui:
+#     external: true
