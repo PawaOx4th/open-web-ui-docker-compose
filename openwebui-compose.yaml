@@ -6,8 +6,8 @@ services:
       - PORT=9080
     ports:
       - "9080:9080"
-    volumes:
-      - ./backup:/app/backend/data/
+    # volumes:
+    #   - ./backup:/app/backend/data/
     # networks:
     #   - open-webui
 
