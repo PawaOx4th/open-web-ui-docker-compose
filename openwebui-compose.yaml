@@ -9,9 +9,9 @@ services:
       - "3001:9080"
     volumes:
       - ./backup:/app/backend/data/
-    networks:
-      - open-webui
+    # networks:
+    #   - open-webui
 
-networks:
-  open-webui:
-    external: true
+# networks:
+#   open-webui:
+#     external: true
