@@ -1,0 +1,227 @@
+# Plane Community Edition v1.4.3 - Docker Compose for Dokploy
+#
+# Upstream: https://github.com/makeplane/plane/releases/download/v1.4.3/docker-compose.yml
+#
+# Dokploy setup
+#   1. Create Service -> Compose -> type "Docker Compose"
+#   2. Compose Path      : ./plane-compose.yaml
+#   3. Environment tab   : paste plane.env.example, replace every CHANGE_ME
+#   4. Domains tab       : plane.pawaox4th.com -> Service "proxy", Port 80, HTTPS (Let's Encrypt)
+#   5. Deploy
+#
+# Differences from upstream and why
+#   - proxy publishes nothing: Dokploy's Traefik owns :80/:443 and terminates TLS.
+#     Caddy inside the proxy service only routes plain HTTP on :80 over the compose network.
+#   - deploy.replicas / restart_policy are swarm-only -> restart: unless-stopped
+#   - no container_name: it breaks Dokploy logs, metrics and redeploys
+#   - secrets have no insecure fallback: deploy fails loudly if one is missing
+#
+# Resource note: the whole stack needs ~4 GB RAM minimum, 8 GB recommended.
+
+x-db-env: &db-env
+  PGHOST: ${PGHOST:-plane-db}
+  PGDATABASE: ${PGDATABASE:-plane}
+  POSTGRES_USER: ${POSTGRES_USER:-plane}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+  POSTGRES_DB: ${POSTGRES_DB:-plane}
+  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  PGDATA: ${PGDATA:-/var/lib/postgresql/data}
+
+x-redis-env: &redis-env
+  REDIS_HOST: ${REDIS_HOST:-plane-redis}
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  # Derived from the parts above so host/port live in one place; override with REDIS_URL if needed.
+  REDIS_URL: ${REDIS_URL:-redis://${REDIS_HOST:-plane-redis}:${REDIS_PORT:-6379}/}
+
+x-minio-env: &minio-env
+  MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is required}
+  MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is required}
+
+x-aws-s3-env: &aws-s3-env
+  AWS_REGION: ${AWS_REGION:-}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is required}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is required}
+  AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://plane-minio:9000}
+  AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-uploads}
+
+x-proxy-env: &proxy-env
+  FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT:-5242880}
+  BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-uploads}
+  SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-0.0.0.0/0}
+  CERT_EMAIL: ${CERT_EMAIL:-}
+  CERT_ACME_CA: ${CERT_ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
+  CERT_ACME_DNS: ${CERT_ACME_DNS:-}
+
+x-mq-env: &mq-env
+  RABBITMQ_HOST: ${RABBITMQ_HOST:-plane-mq}
+  RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+  RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-plane}
+  RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+  RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-plane}
+  RABBITMQ_VHOST: ${RABBITMQ_VHOST:-plane}
+
+x-live-env: &live-env
+  API_BASE_URL: ${API_BASE_URL:-http://api:8000}
+  LIVE_SERVER_SECRET_KEY: ${LIVE_SERVER_SECRET_KEY:?LIVE_SERVER_SECRET_KEY is required}
+
+x-app-env: &app-env
+  WEB_URL: ${WEB_URL:-https://plane.pawaox4th.com}
+  DEBUG: ${DEBUG:-0}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://plane.pawaox4th.com}
+  GUNICORN_WORKERS: ${GUNICORN_WORKERS:-1}
+  USE_MINIO: ${USE_MINIO:-1}
+  # Derived from the parts above so the password appears once; override with DATABASE_URL / AMQP_URL if needed.
+  DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-plane}:${POSTGRES_PASSWORD}@${PGHOST:-plane-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-plane}}
+  SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+  AMQP_URL: ${AMQP_URL:-amqp://${RABBITMQ_USER:-plane}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST:-plane-mq}:${RABBITMQ_PORT:-5672}/${RABBITMQ_VHOST:-plane}}
+  API_KEY_RATE_LIMIT: ${API_KEY_RATE_LIMIT:-60/minute}
+  AUTHENTICATION_RATE_LIMIT: ${AUTHENTICATION_RATE_LIMIT:-10/minute}
+  MINIO_ENDPOINT_SSL: ${MINIO_ENDPOINT_SSL:-0}
+  LIVE_SERVER_SECRET_KEY: ${LIVE_SERVER_SECRET_KEY:?LIVE_SERVER_SECRET_KEY is required}
+  WEBHOOK_ALLOWED_IPS: ${WEBHOOK_ALLOWED_IPS:-}
+  WEBHOOK_ALLOWED_HOSTS: ${WEBHOOK_ALLOWED_HOSTS:-}
+
+services:
+  web:
+    image: makeplane/plane-frontend:${APP_RELEASE:-v1.4.3}
+    restart: unless-stopped
+    depends_on:
+      - api
+      - worker
+
+  space:
+    image: makeplane/plane-space:${APP_RELEASE:-v1.4.3}
+    restart: unless-stopped
+    depends_on:
+      - api
+      - worker
+      - web
+
+  admin:
+    image: makeplane/plane-admin:${APP_RELEASE:-v1.4.3}
+    restart: unless-stopped
+    depends_on:
+      - api
+      - web
+
+  live:
+    image: makeplane/plane-live:${APP_RELEASE:-v1.4.3}
+    restart: unless-stopped
+    environment:
+      <<: [*live-env, *redis-env]
+    depends_on:
+      - api
+      - web
+
+  api:
+    image: makeplane/plane-backend:${APP_RELEASE:-v1.4.3}
+    restart: unless-stopped
+    command: ./bin/docker-entrypoint-api.sh
+    volumes:
+      - logs_api:/code/plane/logs
+    environment:
+      <<: [*app-env, *db-env, *redis-env, *minio-env, *aws-s3-env, *proxy-env]
+    depends_on:
+      - plane-db
+      - plane-redis
+      - plane-mq
+
+  worker:
+    image: makeplane/plane-backend:${APP_RELEASE:-v1.4.3}
+    restart: unless-stopped
+    command: ./bin/docker-entrypoint-worker.sh
+    volumes:
+      - logs_worker:/code/plane/logs
+    environment:
+      <<: [*app-env, *db-env, *redis-env, *minio-env, *aws-s3-env, *proxy-env]
+    depends_on:
+      - api
+      - plane-db
+      - plane-redis
+      - plane-mq
+
+  beat-worker:
+    image: makeplane/plane-backend:${APP_RELEASE:-v1.4.3}
+    restart: unless-stopped
+    command: ./bin/docker-entrypoint-beat.sh
+    volumes:
+      - logs_beat-worker:/code/plane/logs
+    environment:
+      <<: [*app-env, *db-env, *redis-env, *minio-env, *aws-s3-env, *proxy-env]
+    depends_on:
+      - api
+      - plane-db
+      - plane-redis
+      - plane-mq
+
+  # Runs migrations once (exits 0), api/worker/beat wait for migrations internally.
+  migrator:
+    image: makeplane/plane-backend:${APP_RELEASE:-v1.4.3}
+    restart: on-failure
+    command: ./bin/docker-entrypoint-migrator.sh
+    volumes:
+      - logs_migrator:/code/plane/logs
+    environment:
+      <<: [*app-env, *db-env, *redis-env, *minio-env, *aws-s3-env, *proxy-env]
+    depends_on:
+      - plane-db
+      - plane-redis
+
+  plane-db:
+    image: postgres:15.7-alpine
+    restart: unless-stopped
+    command: postgres -c 'max_connections=1000'
+    environment:
+      <<: *db-env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  plane-redis:
+    image: valkey/valkey:7.2.11-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
+  plane-mq:
+    image: rabbitmq:3.13.6-management-alpine
+    restart: unless-stopped
+    environment:
+      <<: *mq-env
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # MinIO-compatible object storage (upstream image name kept as-is).
+  plane-minio:
+    image: docker.io/pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+    restart: unless-stopped
+    command: server /export --console-address ":9090"
+    environment:
+      <<: *minio-env
+    volumes:
+      - uploads:/export
+
+  # Entry point for Dokploy: domain -> proxy:80, proxy routes to web/api/space/admin/live/minio.
+  proxy:
+    image: makeplane/plane-proxy:${APP_RELEASE:-v1.4.3}
+    restart: unless-stopped
+    environment:
+      <<: *proxy-env
+    expose:
+      - "80"
+    depends_on:
+      - web
+      - api
+      - space
+      - admin
+      - live
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+  rabbitmq_data:
+  logs_api:
+  logs_worker:
+  logs_beat-worker:
+  logs_migrator:
