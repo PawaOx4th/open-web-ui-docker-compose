@@ -16,6 +16,13 @@
 #   - no container_name: it breaks Dokploy logs, metrics and redeploys
 #   - secrets have no insecure fallback: deploy fails loudly if one is missing
 #
+# IMPORTANT - enable "Isolated Deployments" for this app.
+#   Dokploy attaches the proxy to the shared dokploy-network so Traefik can reach it.
+#   Any other stack on that network with a service named web / api / space / admin /
+#   live (e.g. kp-dev-tools-...-web-1) makes Docker DNS resolve the short name to
+#   the wrong container and Caddy answers 502. Isolated Deployments puts every
+#   service of this stack on its own network and connects Traefik there instead.
+#
 # Resource note: the whole stack needs ~4 GB RAM minimum, 8 GB recommended.
 
 x-db-env: &db-env
